@@ -1,0 +1,118 @@
+import json
+from selenium import webdriver
+# from selenium.webdriver.chrome.service import Service
+# from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.chrome.service import Service
+import re
+# from selenium.webdriver.support.ui import WebDriverWait
+# from selenium.webdriver.support import expected_conditions as EC
+
+# Setup Chrome options
+chrome_options = Options()
+chrome_options.add_argument("--headless")  # Ensure GUI is off
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--disable-dev-shm-usage")
+
+# Set path to chromedriver as per your configuration
+# webdriver_service = Service('/path/to/chromedriver')  # Change this to your ChromeDriver path
+
+# Choose Chrome Browser
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+# URL of the CoinMarketCap page for DUKO
+url = "https://coinmarketcap.com/currencies/duko/"
+
+# Open the URL
+driver.get(url)
+
+# Wait for elements to load
+# wait = WebDriverWait(driver, 10)
+
+# Extract the necessary data points
+coin = "DUKO"
+
+price_element = driver.find_element('xpath','/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/section/div/div[2]/span')
+price = float(price_element.text.replace('$', '').replace(',', ''))
+
+price_change_element = driver.find_element('xpath','/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/section/div/div[2]/div/div/p')
+price_change_text = price_change_element.text
+
+# Use regular expression to extract only the numerical part
+price_change_numeric = re.search(r'[-+]?\d*\.\d+|\d+', price_change_text).group()
+
+# Convert the extracted numerical part to a float
+price_change = float(price_change_numeric)
+
+market_cap_element = driver.find_element('xpath','/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/div[2]/section[2]/div/div[1]/div/dl/div[1]/div[1]/dd')
+text_market = market_cap_element.text
+market_cap = text_market.split('$')[1].replace(',', '')
+
+
+market_cap_rank_element = driver.find_element('xpath','/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/div[2]/section[2]/div/div[1]/div/dl/div[1]/div[2]/div/span')
+market_cap_rank = int(market_cap_rank_element.text.split('#')[1])
+
+volume_element = driver.find_element('xpath','/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/div[2]/section[2]/div/div[1]/div/dl/div[2]/div[1]/dd')
+text_volume = volume_element.text
+volume = text_volume.split('$')[1].replace(',', '')
+
+volume_rank_element = driver.find_element('xpath','/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/div[2]/section[2]/div/div[1]/div/dl/div[2]/div[2]/div/span')
+volume_rank = int(volume_rank_element.text.split('#')[1])
+
+volume_change_element = driver.find_element('xpath','/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/div[2]/section[2]/div/div[1]/div/dl/div[3]/div/dd')
+volume_change = float(volume_change_element.text.replace('%', '').replace(',', ''))
+
+circulating_supply_element = driver.find_element('xpath','//html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/div[2]/section[2]/div/div[1]/div/dl/div[4]/div/dd')
+circulating_supply = int(circulating_supply_element.text.split(' ')[0].replace(',', ''))
+
+total_supply_element = driver.find_element('xpath','/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/div[2]/section[2]/div/div[1]/div/dl/div[5]/div/dd')
+total_supply = int(total_supply_element.text.split(' ')[0].replace(',', ''))
+
+diluted_market_cap_element=driver.find_element('xpath','/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/div[2]/section[2]/div/div[1]/div/dl/div[7]/div/dd')
+diluted_market_cap = int(diluted_market_cap_element.text.replace('$', '').replace(',', ''))
+
+contract_element = driver.find_element('xpath', '/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/div[2]/section[2]/div/div[2]/div[1]/div[2]/div')
+name = contract_element.text.split(":")[0].strip()
+address = contract_element.text.split(":")[1].strip()
+contracts = [{"name": name, "address": address}]
+
+# Extract official links
+website_element = driver.find_element('xpath', '/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/div[2]/section[2]/div/div[2]/div[2]/div[2]/div/div')
+a_element = driver.find_element('xpath', '/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/div[2]/section[2]/div/div[2]/div[2]/div[2]/div/div/a')
+official_link = a_element.get_attribute("href")
+official_link_name = website_element.text.strip()
+official_links = [{"name": official_link_name, "link": official_link}]
+
+# Extract social links
+twitter_element = driver.find_element('xpath', '/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/div[2]/section[2]/di')
+telegram_element =driver.find_element('xpath', '/html/body/div[1]/div[2]/div/div[2]/div/div/div[2]/div[2]/section[2]/di')
+socials = [
+    {"name": "twitter", "url": twitter_element.get_attribute('href')},
+    {"name": "telegram", "url": telegram_element.get_attribute('href')}
+]
+
+# Compile all data into a dictionary
+data = {
+    "coin": coin,
+    "output": {
+        "price": price,
+        "price_change": price_change,
+        "market_cap": market_cap,
+        "market_cap_rank": market_cap_rank,
+        "volume": volume,
+        "volume_rank": volume_rank,
+        "volume_change": volume_change,
+        "circulating_supply": circulating_supply,
+        "total_supply": total_supply,
+        "diluted_market_cap": diluted_market_cap,
+        "contracts": contracts,
+        "official_links": official_links,
+        # "socials": socials
+    }
+}
+
+# Print the JSON data
+print(json.dumps(data, indent=4))
+
+# Close the browser
+driver.quit()
